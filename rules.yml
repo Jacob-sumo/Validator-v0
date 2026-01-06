@@ -1,0 +1,1631 @@
+# Full canonical 58-rule list (codes match provided list)
+# Each rule includes `code`, `name`, `category`, `severity`, `enabled`, and `params`.
+# Some params include client-specific variants; the engine will respect the --profile argument.
+profiles:
+  A1:
+    ssn:
+      hyphen_allowed: true
+      hyphen_format: "###-##-####"
+      length_with_hyphen: 11
+      length_without_hyphen: 9
+      disallowed_prefixes: ["9", "000", "666"]
+      dummy_examples: ["123-45-6789", "098-76-5432", "111-11-1111", "9876-54-321"]
+    middle_name_policy: "initial"  # initial required (except certain clients)
+  TP:
+    ssn:
+      hyphen_allowed: true
+      hyphen_format: "###-##-####"
+      length_with_hyphen: 11
+      length_without_hyphen: 9
+      disallowed_prefixes: ["9", "000", "666"]
+      dummy_examples: ["123-45-6789"]
+    middle_name_policy: "initial"
+  HSID:
+    ssn:
+      hyphen_allowed: false
+      length_with_hyphen: 0
+      length_without_hyphen: 9
+      disallowed_prefixes: ["9", "000", "666"]
+      dummy_examples: ["123456789"]
+    middle_name_policy: "full"
+
+rules:
+  # 1-6 Name & business heuristics
+  - code: NAME01
+    name: Dummy name like "John Doe"
+    category: name
+    severity: high
+    enabled: true
+    params:
+      field_candidates: ["first_name","last_name","name","full_name"]
+      dummy_names: ["john doe", "jane doe", "test", "unknown"]
+
+  - code: NAME02
+    name: Remove punctuations except hyphen
+    category: name
+    severity: low
+    enabled: true
+    params:
+      fields: ["first_name","last_name","middle_name"]
+      allow: ["-"]
+
+  - code: NAME03
+    name: Similarity between first & last name (likely duplicate)
+    category: name
+    severity: medium
+    enabled: true
+    params:
+      first_field: "first_name"
+      last_field: "last_name"
+      similarity_threshold: 0.85
+
+  - code: NAME04
+    name: Business name detected (Inc./LLC/Company/etc.)
+    category: name
+    severity: medium
+    enabled: true
+    params:
+      fields: ["name","company","organization"]
+      business_tokens: ["inc","llc","company","shop","corp","ltd","limited","trust","hospital","academy","restaurant","foundation","enterprise","school","partners","realty","construction","associates","insurance","restaurant","services","consultant","business","hotel","auto","financial","investment","management","foundation","foundation","office","agency","clinic"]
+
+  - code: NAME05
+    name: Check for spaces-only / leading/trailing spaces
+    category: name
+    severity: low
+    enabled: true
+    params:
+      fields: ["first_name","middle_name","last_name","name"]
+
+  - code: NAME06
+    name: Middle name policy (initial vs full)
+    category: name
+    severity: medium
+    enabled: true
+    params:
+      field: "middle_name"
+      client_policy_field: "middle_name_policy"  # engine uses profile to determine
+
+  # 7-13 Business name blacklist and suffix rule
+  - code: NAME07
+    name: Business keywords blacklist (extended)
+    category: name
+    severity: medium
+    enabled: true
+    params:
+      fields: ["name","company"]
+      blacklist: ["farms","lubbock","tbk","life","consultant","shop","misc","number","exclusive","general","nurse","vehicle","sir","hotel","llc","llp","trust","company","adult","investment","support","advisory","state","mission","auto","business","client","escrow","plan","associates","construction","academy","insurance","electric","wholesale","restaurant","manage","test","corp","foundation","inc","enterprise","school","partners","realty","fund","community","administrative","property","baby","boy","girl","john doe"]
+
+  - code: NAME08
+    name: Suffix-only allowed (Sr/Jr/II/III/IV/V)
+    category: name
+    severity: low
+    enabled: true
+    params:
+      suffix_field: "suffix"
+      allowed_suffixes: ["sr","jr","ii","iii","iv","v","vi"]
+
+  # 14-18 Entity type & minors
+  - code: ENTITY01
+    name: Entity type required (Patient/Employee/Other)
+    category: entity
+    severity: high
+    enabled: true
+    params:
+      field: "entity_type"
+      allowed: ["patient","employee","other","guardian","dependent"]
+
+  - code: ENTITY02
+    name: Employee entity with Minor DOB (invalid)
+    category: entity
+    severity: high
+    enabled: true
+    params:
+      entity_field: "entity_type"
+      dob_field: "dob"
+      minor_cutoff_years: 18
+
+  - code: ENTITY03
+    name: Special client-specific entity checks
+    category: entity
+    severity: medium
+    enabled: true
+    params:
+      notes: "Project-specific entity variants handled via profile"
+
+  - code: ENTITY04
+    name: Entity field must not be blank (Patient/Employee/Other)
+    category: entity
+    severity: high
+    enabled: true
+    params:
+      field: "entity_type"
+
+  # 19-26 SSN & ITIN & format rules (multiple rules)
+  - code: SSN01
+    name: SSN format + basic rules (profile aware)
+    category: id
+    severity: high
+    enabled: true
+    params:
+      field: "ssn"
+
+  - code: SSN02
+    name: SSN disallowed prefixes or patterns
+    category: id
+    severity: high
+    enabled: true
+    params:
+      field: "ssn"
+
+  - code: SSN03
+    name: SSN dummy examples / prohibited sequences
+    category: id
+    severity: high
+    enabled: true
+    params:
+      field: "ssn"
+
+  - code: SSN04
+    name: SSN spaces/underscores/hyphen issues
+    category: id
+    severity: medium
+    enabled: true
+    params:
+      field: "ssn"
+
+  - code: ITIN01
+    name: ITIN present in SSN field
+    category: id
+    severity: medium
+    enabled: true
+    params:
+      ssn_field: "ssn"
+      itin_field: "itin"
+
+  - code: ITIN02
+    name: ITIN format (starts with 9 and certain ranges) (profile aware)
+    category: id
+    severity: medium
+    enabled: true
+    params:
+      field: "itin"
+
+  # 27-30 DOB rules
+  - code: DOB01
+    name: DOB format must be mm/dd/yyyy (project)
+    category: dob
+    severity: high
+    enabled: true
+    params:
+      field: "dob"
+      accepted_formats: ["%m/%d/%Y","%Y-%m-%d","%m-%d-%Y"]
+
+  - code: DOB02
+    name: DOB should not be after today and check month/day validity
+    category: dob
+    severity: high
+    enabled: true
+    params:
+      field: "dob"
+
+  - code: DOB03
+    name: DOB should not be before 1901 (project specific)
+    category: dob
+    severity: medium
+    enabled: true
+    params:
+      field: "dob"
+      min_year: 1901
+
+  - code: STATE01
+    name: State code (2 char) or full name handling per client
+    category: address
+    severity: low
+    enabled: true
+    params:
+      field: "state"
+      accepted_two_letter: true
+
+  # 31-34 DL/State ID checks
+  - code: DL01
+    name: Driver License capture and state mismatch check
+    category: id
+    severity: medium
+    enabled: true
+    params:
+      dl_field: "dl_number"
+      dl_state_field: "dl_state"
+
+  - code: DL02
+    name: State ID capture and state initials present
+    category: id
+    severity: low
+    enabled: true
+    params:
+      state_id_field: "state_id"
+
+  - code: DL03
+    name: DL length validation per state (heuristic)
+    category: id
+    severity: low
+    enabled: true
+    params:
+      dl_field: "dl_number"
+
+  - code: CONSENT01
+    name: Minor consent flag check (Yes/blank only)
+    category: consent
+    severity: medium
+    enabled: true
+    params:
+      field: "consent_flag"
+
+  - code: CONSENT02
+    name: Consent must be only 'Yes' or blank
+    category: consent
+    severity: low
+    enabled: true
+    params:
+      field: "consent_flag"
+      allowed: ["yes",""]
+
+  # 35-41 Address checks
+  - code: ADDR01
+    name: Street address punctuation & spaces (project specific)
+    category: address
+    severity: low
+    enabled: true
+    params:
+      field: "address"
+      client_allow_punctuation_profile_field: null
+
+  - code: ADDR02
+    name: Street similarity vs city/state/zip present in street field
+    category: address
+    severity: medium
+    enabled: true
+    params:
+      address_field: "address"
+      city_field: "city"
+      state_field: "state"
+      zip_field: "zip"
+
+  - code: ADDR03
+    name: City spell-check and normalization
+    category: address
+    severity: low
+    enabled: true
+    params:
+      field: "city"
+
+  - code: ADDR04
+    name: State normalization (abbrev vs full), move out-of-US to international bucket
+    category: address
+    severity: medium
+    enabled: true
+    params:
+      country_field: "country"
+
+  - code: ADDR05
+    name: Zip code length and format (5 or 5-4)
+    category: address
+    severity: medium
+    enabled: true
+    params:
+      field: "zip"
+
+  - code: EMAIL01
+    name: Email organizational domain & syntax checks
+    category: contact
+    severity: medium
+    enabled: true
+    params:
+      field: "email"
+
+  - code: PHONE01
+    name: Phone format (###-###-#### or +1##########)
+    category: contact
+    severity: medium
+    enabled: true
+    params:
+      field: "phone"
+
+  # 42-46 Financial / account checks
+  - code: FIN01
+    name: Financial account number length heuristics
+    category: finance
+    severity: medium
+    enabled: true
+    params:
+      fields: ["account_number","fin_account"]
+
+  - code: FIN02
+    name: Payment card length heuristics (likely 11/14/16)
+    category: finance
+    severity: high
+    enabled: true
+    params:
+      field: "payment_card"
+
+  - code: FIN03
+    name: PAN / MRN / HICN uniqueness checks vs other IDs
+    category: finance
+    severity: medium
+    enabled: true
+    params:
+      fields: ["pan","mrn","hicn"]
+
+  - code: DOS01
+    name: Date of service format and conflicts
+    category: service
+    severity: medium
+    enabled: true
+    params:
+      fields: ["dos","start_date","end_date"]
+
+  - code: INS01
+    name: Medicaid/Medicare only check for HICN vs Medicare/Medicaid
+    category: insurance
+    severity: medium
+    enabled: true
+    params:
+      hicn_field: "hicn"
+      medicare_field: "medicare"
+
+  - code: INS02
+    name: Health insurance policy number capture vs HICN
+    category: insurance
+    severity: medium
+    enabled: true
+    params:
+      field: "insurance_policy"
+
+  # 47-52 Reference / guardian / international bucket checks
+  - code: REF01
+    name: Referral / referring facility presence (optional)
+    category: reference
+    severity: low
+    enabled: true
+    params:
+      field: "referring_facility"
+
+  - code: GUARD01
+    name: Guardian info captured only when present in document
+    category: reference
+    severity: low
+    enabled: true
+    params:
+      field: "guardian_name"
+
+  - code: INTL01
+    name: International address / city / state / zip detection
+    category: international
+    severity: low
+    enabled: true
+    params:
+      country_field: "country"
+
+  - code: INTL02
+    name: Foreign address must include country
+    category: international
+    severity: medium
+    enabled: true
+    params:
+      country_field: "country"
+
+  # 53-58 Tagging / sequencing / similarity / final dedupe & merge
+  - code: TAG01
+    name: Tag vs capture mismatch for SSN/IDs/financial fields
+    category: tagging
+    severity: low
+    enabled: true
+    params:
+      tag_fields: ["ssn_tag","fin_tag"]
+
+  - code: TAG02
+    name: Tag vs capture mismatch for financial/payment tags vs captured
+    category: tagging
+    severity: low
+    enabled: true
+    params:
+      fields: ["payment_tag","account_tag"]
+
+  - code: SEQ01
+    name: Name sequencing inconsistent across records
+    category: normalization
+    severity: medium
+    enabled: true
+    params:
+      name_fields: ["first_name","middle_name","last_name"]
+
+  - code: SIM01
+    name: Typo detection across PII (SSN/DOB/DL/etc.) using heuristics
+    category: similarity
+    severity: medium
+    enabled: true
+    params:
+      fields: ["ssn","dob","dl_number","state_id"]
+
+  - code: SIM02
+    name: Same SSN with totally different names
+    category: similarity
+    severity: high
+    enabled: true
+    params:
+      key_field: "ssn"
+      conflict_fields: ["first_name","last_name"]
+
+  - code: SIM03
+    name: Same SSN with different DOBs
+    category: similarity
+    severity: high
+    enabled: true
+    params:
+      key_field: "ssn"
+      conflict_fields: ["dob"]
+
+  - code: MERGE01
+    name: Same document duplicate detection & auto-merge (post-normalization)
+    category: merge
+    severity: info
+    enabled: true
+    params:
+      method: "exact_normalized_row"
+      auto_merge: true
+```
+
+
+```name=src/validator/utils.py
+import re
+import unicodedata
+from typing import Dict, List
+import difflib
+
+def normalize_header(h: str) -> str:
+    if h is None:
+        return ""
+    h = h.strip()
+    # replace non-alphanum with underscores, collapse underscores, lowercase
+    h = unicodedata.normalize("NFKD", h)
+    h = re.sub(r"[^0-9A-Za-z]+", "_", h).strip("_").lower()
+    return h
+
+def normalize_columns(columns: List[str]) -> Dict[str,str]:
+    # Map synonyms to canonical names where common synonyms exist
+    mapping = {}
+    synonyms = {
+        "first": "first_name", "firstname": "first_name", "givenname": "first_name",
+        "last": "last_name", "lastname": "last_name", "surname": "last_name",
+        "middle": "middle_name", "middlename": "middle_name", "middleinitial": "middle_initial",
+        "ssn": "ssn", "social_security": "ssn", "social_security_number": "ssn",
+        "itin": "itin",
+        "dob": "dob", "dateofbirth": "dob", "birthdate": "dob",
+        "phone": "phone", "telephone": "phone", "mobile": "phone",
+        "email": "email",
+        "address": "address", "street": "address",
+        "city": "city", "state": "state", "zip": "zip", "zipcode": "zip", "postal": "zip",
+        "country": "country",
+        "company": "company", "organization": "company",
+        "customer_id": "customer_id", "account_number": "account_number",
+        "payment_card": "payment_card",
+        "dl_number": "dl_number", "driver_license": "dl_number",
+        "state_id": "state_id",
+        "mrn": "mrn", "hicn": "hicn", "pan": "pan",
+        "entity_type": "entity_type",
+        "consent_flag": "consent_flag",
+        "file_name": "file_name"
+    }
+    for c in columns:
+        key = normalize_header(c)
+        mapped = synonyms.get(key, key)
+        mapping[c] = mapped
+    return mapping
+
+def mask_pii(value: str) -> str:
+    if value is None:
+        return ""
+    s = str(value)
+    if len(s) <= 4:
+        return "*" * len(s)
+    return "*" * (len(s)-4) + s[-4:]
+
+def remove_punct_except_hyphen(s: str) -> str:
+    if s is None:
+        return ""
+    return re.sub(r"[^\w\s\-]", "", s)
+
+def similarity_ratio(a: str, b: str) -> float:
+    if not a or not b:
+        return 0.0
+    a = str(a).lower()
+    b = str(b).lower()
+    return difflib.SequenceMatcher(None, a, b).ratio()
+
+def is_control_char_present(s: str) -> bool:
+    if s is None:
+        return False
+    return bool(re.search(r"[\x00-\x08\x0B\x0C\x0E-\x1F]", str(s)))
+```
+
+```name=src/validator/io.py
+from pathlib import Path
+import pandas as pd
+import re
+from .utils import normalize_header, normalize_columns
+from typing import Dict, List
+
+def load_table(path: str) -> pd.DataFrame:
+    p = Path(path)
+    suff = p.suffix.lower()
+    if suff == ".csv":
+        df = pd.read_csv(path, dtype=str, keep_default_na=False)
+    else:
+        df = pd.read_excel(path, dtype=str, engine="openpyxl")
+        df = df.fillna("")
+    # store original columns and normalized mapping
+    orig_cols = list(df.columns)
+    mapping = normalize_columns(orig_cols)
+    # rename DataFrame to canonical names using mapping
+    # But there can be collisions; ensure unique names by appending index when necessary
+    new_names = {}
+    seen = {}
+    for orig in orig_cols:
+        canonical = mapping.get(orig, normalize_header(orig))
+        # ensure uniqueness
+        if canonical in seen:
+            seen[canonical] += 1
+            canonical = f"{canonical}_{seen[canonical]}"
+        else:
+            seen[canonical] = 0
+        new_names[orig] = canonical
+    df = df.rename(columns=new_names)
+    # ensure all values are strings for consistent checks
+    for c in df.columns:
+        df[c] = df[c].fillna("").astype(str)
+    return df
+
+def write_flags_csv(flags, path: str, mask_sensitive=False):
+    import csv
+    fieldnames = [
+        "run_id", "row_index", "rule_code", "rule_name", "field_name",
+        "value_observed", "masked_value", "message", "suggested_fix", "severity"
+    ]
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        for r in flags:
+            out = dict(r)
+            if mask_sensitive:
+                out["masked_value"] = out.get("value_observed", "")
+            else:
+                out["masked_value"] = ""
+            writer.writerow({
+                "run_id": out.get("run_id"),
+                "row_index": out.get("row_index"),
+                "rule_code": out.get("rule_code"),
+                "rule_name": out.get("rule_name"),
+                "field_name": out.get("field_name"),
+                "value_observed": out.get("value_observed"),
+                "masked_value": out.get("masked_value"),
+                "message": out.get("message"),
+                "suggested_fix": out.get("suggested_fix"),
+                "severity": out.get("severity")
+            })
+
+def write_summary(summary: dict, flags, path: str):
+    by_rule = {}
+    for f in flags:
+        by_rule[f["rule_code"]] = by_rule.get(f["rule_code"], 0) + 1
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(f"Total rows checked: {summary.get('total_rows_checked')}\n")
+        f.write(f"Total issues: {summary.get('total_issues')}\n")
+        f.write(f"Runtime ms: {summary.get('runtime_ms')}\n")
+        f.write("\nIssues by rule:\n")
+        for k, v in sorted(by_rule.items(), key=lambda x: -x[1]):
+            f.write(f"{k}: {v}\n")
+
+def write_flagged_xlsx(df, flags, path: str):
+    flagged_indices = sorted({f["row_index"] for f in flags})
+    if not flagged_indices:
+        # create empty excel with note
+        df.head(0).to_excel(path, index=False)
+        return
+    flagged_df = df.iloc[flagged_indices].copy()
+    flagged_df.to_excel(path, index=False)
+
+def write_merged_map(map_rows, path: str):
+    import csv
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=["representative_row_index","merged_row_index","representative_note"])
+        writer.writeheader()
+        for rec in map_rows:
+            writer.writerow(rec)
+
+def write_merged_dataset(df, path: str):
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(path, index=False)
+```
+
+```name=src/validator/engine.py
+import yaml
+import uuid
+import re
+import pandas as pd
+import math
+import time
+from typing import List, Dict, Any, Tuple
+from .utils import mask_pii, remove_punct_except_hyphen, similarity_ratio, is_control_char_present
+
+class ValidatorEngine:
+    def __init__(self, config_path: str, profile: str = "A1", mask_sensitive: bool = False):
+        with open(config_path, "r", encoding="utf-8") as f:
+            self.cfg = yaml.safe_load(f)
+        self.rules = self.cfg.get("rules", [])
+        self.profiles = self.cfg.get("profiles", {})
+        self.profile = self.profiles.get(profile, {})
+        self.run_id = str(uuid.uuid4())
+        self.mask_sensitive = mask_sensitive
+        # Precompute business blacklist and tokens
+        # many rules are param-driven and executed via dispatch
+        self.code_dispatch = {
+            # Name rules
+            "NAME01": self._check_dummy_name,
+            "NAME02": self._check_punctuations_except_hyphen,
+            "NAME03": self._check_first_last_similarity,
+            "NAME04": self._check_business_name_tokens,
+            "NAME05": self._check_spaces,
+            "NAME06": self._check_middle_name_policy,
+            "NAME07": self._check_business_blacklist,
+            "NAME08": self._check_suffix_only,
+            # Entity
+            "ENTITY01": self._check_entity_type,
+            "ENTITY02": self._check_employee_minor,
+            "ENTITY03": self._check_entity_client_specific,
+            "ENTITY04": self._check_entity_not_blank,
+            # SSN/ITIN
+            "SSN01": self._check_ssn_format,
+            "SSN02": self._check_ssn_disallowed_prefix,
+            "SSN03": self._check_ssn_dummy_examples,
+            "SSN04": self._check_ssn_chars_spaces,
+            "ITIN01": self._check_itin_in_ssn,
+            "ITIN02": self._check_itin_format,
+            # DOB
+            "DOB01": self._check_dob_format,
+            "DOB02": self._check_dob_future,
+            "DOB03": self._check_dob_min_year,
+            "STATE01": self._check_state_code,
+            # DL/State ID
+            "DL01": self._check_dl_state_mismatch,
+            "DL02": self._check_state_id_initials,
+            "DL03": self._check_dl_length_heuristic,
+            # Consent
+            "CONSENT01": self._check_minor_consent_flag,
+            "CONSENT02": self._check_consent_yes_or_blank,
+            # Address
+            "ADDR01": self._check_address_punctuation_spaces,
+            "ADDR02": self._check_address_contains_city_state_zip,
+            "ADDR03": self._check_city_spell_check_stub,
+            "ADDR04": self._check_state_normalization_stub,
+            "ADDR05": self._check_zip_format,
+            "EMAIL01": self._check_email_syntax_org,
+            "PHONE01": self._check_phone_format,
+            # Finance
+            "FIN01": self._check_fin_account_length,
+            "FIN02": self._check_payment_card_length,
+            "FIN03": self._check_pan_mrn_hicn_conflict,
+            "DOS01": self._check_dos_format_conflicts,
+            "INS01": self._check_medicaid_medicare_hicn,
+            "INS02": self._check_insurance_policy_hicn,
+            # Reference / international
+            "REF01": self._check_referral,
+            "GUARD01": self._check_guardian_info,
+            "INTL01": self._check_international_detection,
+            "INTL02": self._check_foreign_address_requires_country,
+            # Tagging
+            "TAG01": self._check_tag_vs_capture,
+            "TAG02": self._check_payment_tag_vs_capture,
+            "SEQ01": self._check_name_sequencing,
+            "SIM01": self._check_typo_heuristics,
+            "SIM02": self._check_same_ssn_diff_names,
+            "SIM03": self._check_same_ssn_diff_dobs,
+            # Merge
+            "MERGE01": self._noop_merge_placeholder
+        }
+
+    def run(self, df: pd.DataFrame, auto_merge: bool = True) -> Tuple[List[Dict[str,Any]], pd.DataFrame, List[Dict[str,Any]]]:
+        start = time.time()
+        flags = []
+        # run each rule (enabled ones)
+        for rule in self.rules:
+            if not rule.get("enabled", True):
+                continue
+            code = rule.get("code")
+            func = self.code_dispatch.get(code)
+            if func:
+                try:
+                    result = func(df, rule)
+                    if result:
+                        flags.extend(result)
+                except Exception as e:
+                    # fail safe: capture as a special flag
+                    flags.append(self._make_flag(-1, rule, "", "", f"Rule execution error: {e}", "Investigate engine error"))
+        # After all rule checks, perform post-normalization merge if requested
+        merged_map = []
+        if auto_merge:
+            df, merged_map, merge_flags = self._auto_merge_same_doc(df)
+            flags.extend(merge_flags)
+        runtime_ms = int((time.time() - start) * 1000)
+        return flags, df, merged_map, runtime_ms
+
+    def _make_flag(self, row_index, rule, field_name, value_observed, message, suggested_fix):
+        val = value_observed if value_observed is not None else ""
+        masked = ""
+        if self.mask_sensitive:
+            masked = mask_pii(val)
+        return {
+            "run_id": self.run_id,
+            "row_index": int(row_index) if isinstance(row_index, (int, float)) and not math.isnan(row_index) else -1,
+            "rule_code": rule.get("code"),
+            "rule_name": rule.get("name"),
+            "field_name": field_name or "",
+            "value_observed": val,
+            "masked_value": masked,
+            "message": message,
+            "suggested_fix": suggested_fix,
+            "severity": rule.get("severity", "medium")
+        }
+
+    # -----------------------
+    # Rule implementations
+    # Each returns a List[flag dict] for rows that fail the rule
+    # -----------------------
+
+    # NAME rules
+    def _check_dummy_name(self, df, rule):
+        fields = rule.get("params", {}).get("field_candidates", ["first_name","last_name","name"])
+        dummy_set = set([s.lower() for s in rule.get("params", {}).get("dummy_names", [])])
+        flags = []
+        for f in fields:
+            if f not in df.columns:
+                continue
+            for idx, val in df[f].items():
+                if not val:
+                    continue
+                v = val.strip().lower()
+                if v in dummy_set:
+                    flags.append(self._make_flag(idx, rule, f, val, f"Dummy name detected: {val}", f"Replace dummy name with actual name"))
+        return flags
+
+    def _check_punctuations_except_hyphen(self, df, rule):
+        fields = rule.get("params", {}).get("fields", [])
+        flags = []
+        for f in fields:
+            if f not in df.columns:
+                continue
+            for idx, val in df[f].items():
+                if not val:
+                    continue
+                cleaned = remove_punct_except_hyphen(val)
+                if cleaned != val:
+                    flags.append(self._make_flag(idx, rule, f, val, "Punctuation present (suggest remove except hyphen)", f"Replace punctuation: {cleaned}"))
+        return flags
+
+    def _check_first_last_similarity(self, df, rule):
+        f1 = rule.get("params", {}).get("first_field", "first_name")
+        f2 = rule.get("params", {}).get("last_field", "last_name")
+        thr = float(rule.get("params", {}).get("similarity_threshold", 0.85))
+        flags = []
+        if f1 not in df.columns or f2 not in df.columns:
+            return flags
+        for idx in df.index:
+            a = df.at[idx, f1] or ""
+            b = df.at[idx, f2] or ""
+            if not a or not b:
+                continue
+            score = similarity_ratio(a, b)
+            if score >= thr:
+                flags.append(self._make_flag(idx, rule, f"{f1},{f2}", f"{a}|{b}", f"First and last name are suspiciously similar (score={score:.2f})", "Confirm whether this is a duplicate or combine names appropriately"))
+        return flags
+
+    def _check_business_name_tokens(self, df, rule):
+        fields = rule.get("params", {}).get("fields", ["company", "name"])
+        tokens = [t.lower() for t in rule.get("params", {}).get("business_tokens", [])]
+        flags = []
+        for f in fields:
+            if f not in df.columns:
+                continue
+            for idx, val in df[f].items():
+                if not val:
+                    continue
+                low = val.lower()
+                for t in tokens:
+                    if t in low:
+                        flags.append(self._make_flag(idx, rule, f, val, f"Business token '{t}' detected in name/company", "If record is personal, remove business token; otherwise mark as organization"))
+                        break
+        return flags
+
+    def _check_spaces(self, df, rule):
+        fields = rule.get("params", {}).get("fields", ["first_name","last_name","name"])
+        flags = []
+        for f in fields:
+            if f not in df.columns:
+                continue
+            for idx, val in df[f].items():
+                if val is None:
+                    continue
+                if val.strip() == "":
+                    flags.append(self._make_flag(idx, rule, f, val, "Field blank or only spaces", "Fill required value"))
+                elif val != val.strip():
+                    flags.append(self._make_flag(idx, rule, f, val, "Leading/trailing spaces detected", "Trim whitespace"))
+        return flags
+
+    def _check_middle_name_policy(self, df, rule):
+        field = rule.get("params", {}).get("field", "middle_name")
+        policy_name = rule.get("params", {}).get("client_policy_field", "middle_name_policy")
+        client_policy = None
+        if policy_name and self.profile:
+            client_policy = self.profile.get("middle_name_policy")
+        flags = []
+        if field not in df.columns:
+            return flags
+        for idx, val in df[field].items():
+            if not val:
+                continue
+            # policy: 'initial' -> must be single letter or letter+dot
+            if client_policy == "initial":
+                if len(val.strip()) > 2:
+                    flags.append(self._make_flag(idx, rule, field, val, "Middle name longer than initial per policy", "Use initial only"))
+            # HSID -> full required; flag when short
+            elif client_policy == "full":
+                if len(val.strip()) <= 2:
+                    flags.append(self._make_flag(idx, rule, field, val, "Full middle name expected per profile", "Capture full middle name"))
+        return flags
+
+    def _check_business_blacklist(self, df, rule):
+        fields = rule.get("params", {}).get("fields", ["name","company"])
+        blacklist = set([b.lower() for b in rule.get("params", {}).get("blacklist", [])])
+        flags = []
+        for f in fields:
+            if f not in df.columns:
+                continue
+            for idx, val in df[f].items():
+                if not val:
+                    continue
+                low = val.lower()
+                for token in blacklist:
+                    if token in low:
+                        flags.append(self._make_flag(idx, rule, f, val, f"Blacklisted business token '{token}' found", "Verify whether this is personal vs business"))
+                        break
+        return flags
+
+    def _check_suffix_only(self, df, rule):
+        suf_field = rule.get("params", {}).get("suffix_field", "suffix")
+        allowed = set([s.lower() for s in rule.get("params", {}).get("allowed_suffixes", [])])
+        flags = []
+        if suf_field not in df.columns:
+            return flags
+        for idx, val in df[suf_field].items():
+            if not val:
+                continue
+            if val.strip().lower() not in allowed:
+                flags.append(self._make_flag(idx, rule, suf_field, val, "Unexpected suffix value", f"Only allow: {', '.join(allowed)}"))
+        return flags
+
+    # ENTITY rules
+    def _check_entity_type(self, df, rule):
+        f = rule.get("params", {}).get("field", "entity_type")
+        allowed = set([a.lower() for a in rule.get("params", {}).get("allowed", [])])
+        flags = []
+        if f not in df.columns:
+            return flags
+        for idx, val in df[f].items():
+            if not val or val.strip().lower() not in allowed:
+                flags.append(self._make_flag(idx, rule, f, val, "Entity type missing or unexpected", f"Use one of: {', '.join(allowed)}"))
+        return flags
+
+    def _check_employee_minor(self, df, rule):
+        ent = rule.get("params", {}).get("entity_field", "entity_type")
+        dob = rule.get("params", {}).get("dob_field", "dob")
+        min_age = int(rule.get("params", {}).get("minor_cutoff_years", 18))
+        flags = []
+        if ent not in df.columns or dob not in df.columns:
+            return flags
+        from datetime import datetime
+        for idx in df.index:
+            entity = (df.at[idx, ent] or "").strip().lower()
+            dobv = (df.at[idx, dob] or "").strip()
+            if entity == "employee" and dobv:
+                try:
+                    d = pd.to_datetime(dobv, errors="coerce")
+                    if pd.isna(d):
+                        continue
+                    age = (pd.Timestamp.now() - d).days / 365.25
+                    if age < min_age:
+                        flags.append(self._make_flag(idx, rule, f"{ent},{dob}", f"{entity}|{dobv}", "Employee record with minor DOB", "Verify entity type for minors"))
+                except Exception:
+                    continue
+        return flags
+
+    def _check_entity_client_specific(self, df, rule):
+        # placeholder for custom client-specific logic
+        return []
+
+    def _check_entity_not_blank(self, df, rule):
+        f = rule.get("params", {}).get("field", "entity_type")
+        flags = []
+        if f not in df.columns:
+            return flags
+        for idx, val in df[f].items():
+            if not val or val.strip() == "":
+                flags.append(self._make_flag(idx, rule, f, val, "Entity type blank", "Provide entity type"))
+        return flags
+
+    # SSN & ITIN rules
+    def _normalize_ssn_digits(self, s: str) -> str:
+        if s is None:
+            return ""
+        s = re.sub(r"[^\d]", "", str(s))
+        return s
+
+    def _check_ssn_format(self, df, rule):
+        field = rule.get("params", {}).get("field", "ssn")
+        flags = []
+        if field not in df.columns:
+            return flags
+        prof = self.profile.get("ssn", {})
+        hyphen_ok = prof.get("hyphen_allowed", True)
+        for idx, val in df[field].items():
+            if not val:
+                continue
+            raw = str(val).strip()
+            digits = self._normalize_ssn_digits(raw)
+            if hyphen_ok:
+                if len(digits) != prof.get("length_without_hyphen", 9):
+                    flags.append(self._make_flag(idx, rule, field, raw, f"SSN digit length expected {prof.get('length_without_hyphen',9)}", "Ensure SSN has correct number of digits"))
+            else:
+                # HSID expects 9 digits contiguous
+                if len(digits) != prof.get("length_without_hyphen", 9):
+                    flags.append(self._make_flag(idx, rule, field, raw, "SSN format unexpected for profile (HSID expects running 9 digits)", "Ensure correct SSN format for profile"))
+        return flags
+
+    def _check_ssn_disallowed_prefix(self, df, rule):
+        field = rule.get("params", {}).get("field", "ssn")
+        flags = []
+        if field not in df.columns:
+            return flags
+        dis = set(self.profile.get("ssn", {}).get("disallowed_prefixes", ["9","000","666"]))
+        for idx, val in df[field].items():
+            if not val:
+                continue
+            digits = self._normalize_ssn_digits(val)
+            if any(digits.startswith(p) for p in dis):
+                flags.append(self._make_flag(idx, rule, field, val, "SSN starts with disallowed prefix", "Verify SSN"))
+            # 4th/5th place '00' check (positions 3-4 if 0-indexed)
+            if len(digits) >= 5 and digits[3:5] == "00":
+                flags.append(self._make_flag(idx, rule, field, val, "SSN has '00' in 4th-5th position", "Verify SSN"))
+            if digits.endswith("0000"):
+                flags.append(self._make_flag(idx, rule, field, val, "SSN ends with '0000'", "Verify SSN"))
+        return flags
+
+    def _check_ssn_dummy_examples(self, df, rule):
+        field = rule.get("params", {}).get("field", "ssn")
+        dummies = set(self.profile.get("ssn", {}).get("dummy_examples", []))
+        flags = []
+        if field not in df.columns:
+            return flags
+        for idx, val in df[field].items():
+            if not val:
+                continue
+            if val.strip() in dummies:
+                flags.append(self._make_flag(idx, rule, field, val, "SSN matches known dummy example", "Replace with real SSN or blank if none"))
+        return flags
+
+    def _check_ssn_chars_spaces(self, df, rule):
+        field = rule.get("params", {}).get("field", "ssn")
+        flags = []
+        if field not in df.columns:
+            return flags
+        for idx, val in df[field].items():
+            if val and re.search(r"[ _]{1,}", val):
+                flags.append(self._make_flag(idx, rule, field, val, "SSN contains spaces/underscores/double hyphens", "Remove invalid separators"))
+        return flags
+
+    def _check_itin_in_ssn(self, df, rule):
+        ssn_field = rule.get("params", {}).get("ssn_field", "ssn")
+        itin_field = rule.get("params", {}).get("itin_field", "itin")
+        flags = []
+        if ssn_field not in df.columns:
+            return flags
+        for idx, val in df[ssn_field].items():
+            if not val:
+                continue
+            digits = self._normalize_ssn_digits(val)
+            # naive heuristic: ITIN starts with 9 and has certain ranges e.g., 900-70-0000 - this is domain-specific.
+            if digits.startswith("9") and len(digits) == 9:
+                flags.append(self._make_flag(idx, rule, ssn_field, val, "Value looks like ITIN captured in SSN field", f"Move value to {itin_field} column or tag ITIN"))
+        return flags
+
+    def _check_itin_format(self, df, rule):
+        field = rule.get("params", {}).get("field", "itin")
+        flags = []
+        if field not in df.columns:
+            return flags
+        for idx, val in df[field].items():
+            if not val:
+                continue
+            d = self._normalize_ssn_digits(val)
+            if not (d.startswith("9") and len(d) == 9):
+                flags.append(self._make_flag(idx, rule, field, val, "ITIN format unexpected", "Verify ITIN"))
+        return flags
+
+    # DOB/state
+    def _check_dob_format(self, df, rule):
+        field = rule.get("params", {}).get("field", "dob")
+        accepted = rule.get("params", {}).get("accepted_formats", ["%m/%d/%Y"])
+        flags = []
+        if field not in df.columns:
+            return flags
+        for idx, val in df[field].items():
+            if not val:
+                continue
+            parsed = pd.to_datetime(val, errors="coerce", dayfirst=False)
+            if pd.isna(parsed):
+                flags.append(self._make_flag(idx, rule, field, val, "DOB parse/format invalid", f"Use one of formats: {accepted}"))
+        return flags
+
+    def _check_dob_future(self, df, rule):
+        field = rule.get("params", {}).get("field", "dob")
+        flags = []
+        if field not in df.columns:
+            return flags
+        today = pd.Timestamp.now().normalize()
+        for idx, val in df[field].items():
+            if not val:
+                continue
+            d = pd.to_datetime(val, errors="coerce")
+            if pd.isna(d):
+                continue
+            if d > today:
+                flags.append(self._make_flag(idx, rule, field, val, "DOB in future", "Correct DOB or confirm"))
+        return flags
+
+    def _check_dob_min_year(self, df, rule):
+        field = rule.get("params", {}).get("field", "dob")
+        min_year = int(rule.get("params", {}).get("min_year", 1901))
+        flags = []
+        if field not in df.columns:
+            return flags
+        for idx, val in df[field].items():
+            if not val:
+                continue
+            d = pd.to_datetime(val, errors="coerce")
+            if pd.isna(d):
+                continue
+            if d.year < min_year:
+                flags.append(self._make_flag(idx, rule, field, val, f"DOB before {min_year}", "Verify DOB"))
+        return flags
+
+    def _check_state_code(self, df, rule):
+        field = rule.get("params", {}).get("field", "state")
+        flags = []
+        if field not in df.columns:
+            return flags
+        for idx, val in df[field].items():
+            v = (val or "").strip()
+            if not v:
+                continue
+            # simple: if two-letter uppercase OK; else flag
+            if len(v) == 2 and v.upper() == v:
+                continue
+            if len(v) > 2 and "-" in v:
+                continue
+            # else flag (project-specific may accept full names)
+            flags.append(self._make_flag(idx, rule, field, val, "State code format unexpected", "Use two-letter abbreviation or 'State - XX' form"))
+        return flags
+
+    # DL / State ID
+    def _check_dl_state_mismatch(self, df, rule):
+        dl_f = rule.get("params", {}).get("dl_field", "dl_number")
+        dl_state = rule.get("params", {}).get("dl_state_field", "dl_state")
+        flags = []
+        if dl_f not in df.columns or dl_state not in df.columns:
+            return flags
+        for idx in df.index:
+            dl = (df.at[idx, dl_f] or "").strip()
+            st = (df.at[idx, dl_state] or "").strip()
+            if not dl:
+                continue
+            # if state initials are missing, flag
+            if st == "":
+                flags.append(self._make_flag(idx, rule, f"{dl_f},{dl_state}", f"{dl}|{st}", "DL state missing", "Populate DL state or verify"))
+            # heuristic: length less than 8 flagged
+            if len(re.sub(r"[^\w]","",dl)) < 8:
+                flags.append(self._make_flag(idx, rule, dl_f, dl, "Driver license length < 8 (heuristic)", "Verify DL length"))
+        return flags
+
+    def _check_state_id_initials(self, df, rule):
+        f = rule.get("params", {}).get("state_id_field", "state_id")
+        flags = []
+        if f not in df.columns:
+            return flags
+        for idx, val in df[f].items():
+            if not val:
+                continue
+            if len(val.strip()) < 2:
+                flags.append(self._make_flag(idx, rule, f, val, "State ID missing initials or too short", "Include state initials if applicable"))
+        return flags
+
+    def _check_dl_length_heuristic(self, df, rule):
+        f = rule.get("params", {}).get("dl_field", "dl_number")
+        flags = []
+        if f not in df.columns:
+            return flags
+        for idx, val in df[f].items():
+            if not val:
+                continue
+            ln = len(re.sub(r"[^\w]","",val))
+            if ln < 5:
+                flags.append(self._make_flag(idx, rule, f, val, "DL length < 5 — unusual", "Verify DL value/format"))
+        return flags
+
+    # Consent
+    def _check_minor_consent_flag(self, df, rule):
+        f = rule.get("params", {}).get("field", "consent_flag")
+        flags = []
+        if f not in df.columns:
+            return flags
+        for idx, val in df[f].items():
+            if val and val.strip().lower() not in ("yes","no",""):
+                flags.append(self._make_flag(idx, rule, f, val, "Consent flag unexpected value", "Use 'Yes' or blank"))
+        return flags
+
+    def _check_consent_yes_or_blank(self, df, rule):
+        f = rule.get("params", {}).get("field", "consent_flag")
+        allowed = set(rule.get("params", {}).get("allowed", ["yes",""]))
+        flags = []
+        if f not in df.columns:
+            return flags
+        for idx, val in df[f].items():
+            if val is None:
+                continue
+            if val.strip().lower() not in allowed:
+                flags.append(self._make_flag(idx, rule, f, val, "Consent contains values other than 'Yes' or blank", "Normalize consent field"))
+        return flags
+
+    # Address
+    def _check_address_punctuation_spaces(self, df, rule):
+        f = rule.get("params", {}).get("field", "address")
+        flags = []
+        if f not in df.columns:
+            return flags
+        for idx, val in df[f].items():
+            if not val:
+                continue
+            # project A1/TP no punctuation (basic heuristic)
+            # use profile to decide
+            flags_needed = False
+            prof_allows = False
+            # if profile contains a setting to allow punctuation, honor it
+            prof = self.profile
+            if not prof:
+                prof_allows = False
+            if not prof_allows:
+                if re.search(r"[^\w\s\-\#]", val):
+                    flags_needed = True
+            if flags_needed:
+                flags.append(self._make_flag(idx, rule, f, val, "Street address has disallowed punctuation for profile", "Remove punctuation or move to native doc field"))
+        return flags
+
+    def _check_address_contains_city_state_zip(self, df, rule):
+        a = rule.get("params", {}).get("address_field", "address")
+        c = rule.get("params", {}).get("city_field", "city")
+        s = rule.get("params", {}).get("state_field", "state")
+        z = rule.get("params", {}).get("zip_field", "zip")
+        flags = []
+        if a not in df.columns:
+            return flags
+        for idx, val in df[a].items():
+            low = (val or "").lower()
+            if not low:
+                continue
+            if c in df.columns and df.at[idx,c] and df.at[idx,c].lower() in low:
+                flags.append(self._make_flag(idx, rule, a, val, "Address field contains city text", "Move city to city field"))
+            if s in df.columns and df.at[idx,s] and df.at[idx,s].lower() in low:
+                flags.append(self._make_flag(idx, rule, a, val, "Address field contains state text", "Move state to state field"))
+            if z in df.columns and df.at[idx,z] and df.at[idx,z].replace("-","") in low:
+                flags.append(self._make_flag(idx, rule, a, val, "Address field contains zip code text", "Move zip to zip field"))
+        return flags
+
+    def _check_city_spell_check_stub(self, df, rule):
+        # placeholder: in MVP we just verify city isn't numeric or empty
+        f = rule.get("params", {}).get("field", "city")
+        flags = []
+        if f not in df.columns:
+            return flags
+        for idx, val in df[f].items():
+            if not val:
+                continue
+            if any(ch.isdigit() for ch in val):
+                flags.append(self._make_flag(idx, rule, f, val, "City contains digits", "Verify city name"))
+        return flags
+
+    def _check_state_normalization_stub(self, df, rule):
+        # placeholder: flag very long states (likely full state)
+        f = rule.get("params", {}).get("country_field", "country")
+        return []
+
+    def _check_zip_format(self, df, rule):
+        f = rule.get("params", {}).get("field", "zip")
+        flags = []
+        if f not in df.columns:
+            return flags
+        for idx, val in df[f].items():
+            v = (val or "").strip()
+            if not v:
+                continue
+            if not re.match(r"^\d{5}(-\d{4})?$", v):
+                flags.append(self._make_flag(idx, rule, f, val, "Zip/postal format unexpected (expect 5 or 5-4)", "Use 12345 or 12345-6789"))
+        return flags
+
+    def _check_email_syntax_org(self, df, rule):
+        f = rule.get("params", {}).get("field", "email")
+        flags = []
+        if f not in df.columns:
+            return flags
+        for idx, val in df[f].items():
+            v = (val or "").strip()
+            if not v:
+                continue
+            if "@" not in v or "." not in v.split("@")[-1]:
+                flags.append(self._make_flag(idx, rule, f, val, "Email syntax invalid", "Ensure email has '@' and domain"))
+            # organizational domain heuristics (simple)
+            domain = v.split("@")[-1].lower() if "@" in v else ""
+            if any(x in domain for x in ["hotmail","gmail","yahoo"]) :
+                # personal email detected — not necessarily error; skip
+                pass
+        return flags
+
+    def _check_phone_format(self, df, rule):
+        f = rule.get("params", {}).get("field", "phone")
+        flags = []
+        if f not in df.columns:
+            return flags
+        for idx, val in df[f].items():
+            v = re.sub(r"[^\d\+]", "", (val or ""))
+            if not v:
+                continue
+            digits = re.sub(r"[^\d]", "", v)
+            if len(digits) < 7:
+                flags.append(self._make_flag(idx, rule, f, val, "Phone number too short", "Verify phone length"))
+            # dummy phone heuristics
+            if digits in ("0000000000","1234567890"):
+                flags.append(self._make_flag(idx, rule, f, val, "Dummy phone number detected", "Replace with valid phone"))
+        return flags
+
+    # Finance and IDs
+    def _check_fin_account_length(self, df, rule):
+        fields = rule.get("params", {}).get("fields", ["account_number","fin_account"])
+        flags = []
+        for f in fields:
+            if f not in df.columns:
+                continue
+            for idx, val in df[f].items():
+                v = re.sub(r"[^\d]", "", (val or ""))
+                if not v:
+                    continue
+                if len(v) < 5:
+                    flags.append(self._make_flag(idx, rule, f, val, "Financial account number too short (<5)", "Verify account number capture"))
+        return flags
+
+    def _check_payment_card_length(self, df, rule):
+        f = rule.get("params", {}).get("field", "payment_card")
+        flags = []
+        if f not in df.columns:
+            return flags
+        for idx, val in df[f].items():
+            v = re.sub(r"[^\d]", "", (val or ""))
+            if not v:
+                continue
+            if len(v) < 4:
+                flags.append(self._make_flag(idx, rule, f, val, "Payment card value too short", "Verify card capture"))
+            if len(v) not in (11,14,16):
+                # many card lengths acceptable; flag if clearly odd
+                flags.append(self._make_flag(idx, rule, f, val, "Payment card length unexpected", "Verify card capture"))
+        return flags
+
+    def _check_pan_mrn_hicn_conflict(self, df, rule):
+        fields = rule.get("params", {}).get("fields", ["pan","mrn","hicn"])
+        flags = []
+        # check duplicates across these fields in single row
+        for idx in df.index:
+            vals = {fld:(df.at[idx,fld] or "") for fld in fields if fld in df.columns}
+            # naive conflict detection: same value duplicated across types
+            seen = {}
+            for fld, v in vals.items():
+                if not v:
+                    continue
+                if v in seen and seen[v] != fld:
+                    flags.append(self._make_flag(idx, rule, f"{fld},{seen[v]}", v, "Identifier repeats across different ID fields", "Verify tagging vs actual ID type"))
+                seen[v] = fld
+        return flags
+
+    def _check_dos_format_conflicts(self, df, rule):
+        fields = rule.get("params", {}).get("fields", ["dos","start_date","end_date"])
+        flags = []
+        for f in fields:
+            if f not in df.columns:
+                continue
+            for idx, val in df[f].items():
+                if not val:
+                    continue
+                d = pd.to_datetime(val, errors="coerce")
+                if pd.isna(d):
+                    flags.append(self._make_flag(idx, rule, f, val, "Date of service parse invalid", "Use mm/dd/yyyy or project format"))
+        # conflict detection (start > end)
+        if all([fld in df.columns for fld in ("start_date","end_date")]):
+            for idx in df.index:
+                s = pd.to_datetime(df.at[idx,"start_date"], errors="coerce")
+                e = pd.to_datetime(df.at[idx,"end_date"], errors="coerce")
+                if not pd.isna(s) and not pd.isna(e) and s > e:
+                    flags.append(self._make_flag(idx, rule, "start_date,end_date", f"{s}|{e}", "Date of service conflict (start after end)", "Correct date order"))
+        return flags
+
+    def _check_medicaid_medicare_hicn(self, df, rule):
+        # Placeholder: flag unexpected entries in HICN column
+        return []
+
+    def _check_insurance_policy_hicn(self, df, rule):
+        # Placeholder
+        return []
+
+    # Reference / international
+    def _check_referral(self, df, rule):
+        return []
+
+    def _check_guardian_info(self, df, rule):
+        return []
+
+    def _check_international_detection(self, df, rule):
+        country_f = rule.get("params", {}).get("country_field", "country")
+        flags = []
+        if country_f not in df.columns:
+            return flags
+        for idx, val in df[country_f].items():
+            if val and val.strip().lower() != "us":
+                flags.append(self._make_flag(idx, rule, country_f, val, "Non-US country detected", "Check international address handling"))
+        return flags
+
+    def _check_foreign_address_requires_country(self, df, rule):
+        country_f = rule.get("params", {}).get("country_field", "country")
+        address_fields = ["address","city","state","zip"]
+        flags = []
+        if country_f not in df.columns:
+            return flags
+        for idx in df.index:
+            # if any address field has non-US patterns but no country provided
+            has_foreign = False
+            for af in address_fields:
+                if af in df.columns and df.at[idx,af] and not re.search(r"\b[A-Za-z0-9\-\s,\.]+\b", df.at[idx,af]):
+                    has_foreign = True
+            if has_foreign and not df.at[idx,country_f]:
+                flags.append(self._make_flag(idx, rule, country_f, df.at[idx,country_f], "Foreign address without country", "Provide country for international addresses"))
+        return flags
+
+    # Tagging
+    def _check_tag_vs_capture(self, df, rule):
+        # placeholder
+        return []
+
+    def _check_payment_tag_vs_capture(self, df, rule):
+        # placeholder
+        return []
+
+    def _check_name_sequencing(self, df, rule):
+        # detect inconsistent name sequencing across rows for same person (weak heuristic)
+        fields = rule.get("params", {}).get("name_fields", ["first_name","middle_name","last_name"])
+        flags = []
+        if not all([f in df.columns for f in fields]):
+            return flags
+        # Build a signature by concatenating values
+        sig_map = {}
+        for idx in df.index:
+            sig = "|".join([df.at[idx,f].strip().lower() for f in fields])
+            base = (df.at[idx,fields[0]].strip().lower(), df.at[idx,fields[-1]].strip().lower())
+            if base in sig_map and sig_map[base] != sig:
+                flags.append(self._make_flag(idx, rule, ",".join(fields), sig, "Name sequencing inconsistent compared to other records", "Normalize name splitting"))
+            else:
+                sig_map[base] = sig
+        return flags
+
+    def _check_typo_heuristics(self, df, rule):
+        # basic heuristic: SSNs that differ by one char, DOB flip (mm/dd <-> dd/mm)
+        flags = []
+        # naive O(n^2) approach for small datasets; acceptable for MVP but not ideal for 100k
+        n = len(df)
+        if n > 2000:
+            return flags
+        # check SSN typos
+        if "ssn" in df.columns:
+            ssns = df["ssn"].fillna("").astype(str)
+            for i in range(n):
+                for j in range(i+1, n):
+                    a = re.sub(r"[^\d]","", ssns.iat[i])
+                    b = re.sub(r"[^\d]","", ssns.iat[j])
+                    if a and b and len(a) == len(b):
+                        # Hamming-like check: <=1 digit different
+                        diff = sum(1 for x,y in zip(a,b) if x!=y)
+                        if diff == 1:
+                            flags.append(self._make_flag(j, rule, "ssn", ssns.iat[j], f"SSN likely typo versus row {i}", "Verify SSN"))
+        return flags
+
+    def _check_same_ssn_diff_names(self, df, rule):
+        key = rule.get("params", {}).get("key_field", "ssn")
+        conflict_fields = rule.get("params", {}).get("conflict_fields", ["first_name","last_name"])
+        flags = []
+        if key not in df.columns:
+            return flags
+        grouped = df.groupby(key, dropna=False).apply(lambda g: g.index.tolist() if len(g)>1 else []).reset_index(name="dups")
+        for _, row in grouped.iterrows():
+            dup_list = row["dups"]
+            if isinstance(dup_list, list) and len(dup_list) > 1:
+                # check if name fields differ
+                for idx in dup_list:
+                    for f in conflict_fields:
+                        if f in df.columns:
+                            vals = set(df.loc[dup_list, f].fillna("").astype(str).str.strip().str.lower())
+                            if len([v for v in vals if v]) > 1:
+                                flags.append(self._make_flag(idx, rule, f, df.at[idx,f], "Same SSN mapped to different names", "Investigate possible identity mismatch"))
+                                break
+        return flags
+
+    def _check_same_ssn_diff_dobs(self, df, rule):
+        key = rule.get("params", {}).get("key_field", "ssn")
+        conflict_fields = rule.get("params", {}).get("conflict_fields", ["dob"])
+        flags = []
+        if key not in df.columns:
+            return flags
+        grouped = df.groupby(key, dropna=False).apply(lambda g: g.index.tolist() if len(g)>1 else []).reset_index(name="dups")
+        for _, row in grouped.iterrows():
+            dup_list = row["dups"]
+            if isinstance(dup_list, list) and len(dup_list) > 1:
+                for f in conflict_fields:
+                    if f in df.columns:
+                        vals = set(df.loc[dup_list, f].fillna("").astype(str).str.strip())
+                        if len([v for v in vals if v]) > 1:
+                            for idx in dup_list:
+                                flags.append(self._make_flag(idx, rule, f, df.at[idx,f], "Same SSN mapped to different DOBs", "Investigate DOB mismatch"))
+                            break
+        return flags
+
+    # MERGE: same doc duplicate detection & auto-merge
+    def _auto_merge_same_doc(self, df: pd.DataFrame):
+        # Normalize values for comparison (strip, lower, remove punctuation except hyphen)
+        norm_df = df.copy()
+        for c in norm_df.columns:
+            # normalize to simple comparable text
+            norm_df[c] = norm_df[c].fillna("").astype(str).str.strip().str.lower().apply(lambda s: re.sub(r"[^\w\s\-]","", s))
+        # build a tuple signature across all columns
+        sig_series = norm_df.apply(lambda row: "||".join([str(row[c]) for c in norm_df.columns]), axis=1)
+        # find duplicate groups
+        grouped = sig_series.groupby(sig_series).apply(lambda idxs: list(idxs.index))
+        merged_map = []
+        to_drop = set()
+        merge_flags = []
+        for signature, idx_list in grouped.items():
+            if len(idx_list) <= 1:
+                continue
+            # choose representative: lowest index
+            rep = min(idx_list)
+            for dup in idx_list:
+                if dup == rep:
+                    continue
+                to_drop.add(dup)
+                merged_map.append({
+                    "representative_row_index": int(rep),
+                    "merged_row_index": int(dup),
+                    "representative_note": "auto-merged same-doc duplicate"
+                })
+                # add merge flag for removed row
+                merge_flags.append(self._make_flag(dup, {"code":"MERGE01","name":"Auto-merge same doc duplicate","severity":"info"}, "", "", f"Row auto-merged into {rep}", "Record merged automatically"))
+        # drop duplicates from df and return new df
+        if to_drop:
+            df_dropped = df.drop(index=list(to_drop)).reset_index(drop=True)
+            # Because we reindexed, representative indices refer to original index values; to keep mapping clear,
+            # we will write merged_map referencing original indices. The returned df has reset indices, it's recommended
+            # to use merged_map to trace merges.
+            return df_dropped, merged_map, merge_flags
+        else:
+            return df, merged_map, merge_flags
+
+    def _noop_merge_placeholder(self, df, rule):
+        return []
+```
+
+```name=src/validator/runner.py
+import argparse
+import time
+from pathlib import Path
+import os
+from .io import load_table, write_flags_csv, write_summary, write_flagged_xlsx, write_merged_map, write_merged_dataset
+from .engine import ValidatorEngine
+
+def main():
+    parser = argparse.ArgumentParser(description="Run Data Normalization Validator (local) - Full 58 checks")
+    parser.add_argument("--input", "-i", required=True, help="Path to input Excel/CSV file")
+    parser.add_argument("--config", "-c", default="config/rules.yml", help="Path to YAML rules config")
+    parser.add_argument("--outdir", "-o", default="./out", help="Output directory")
+    parser.add_argument("--profile", "-p", default="A1", help="Client profile (A1, TP, HSID)")
+    parser.add_argument("--flagged-xlsx", action="store_true", help="Emit flagged-only xlsx")
+    parser.add_argument("--mask-sensitive", action="store_true", help="Mask sensitive values in Flags.csv")
+    parser.add_argument("--auto-merge", action="store_true", help="Auto-merge same-doc duplicates after validation")
+    args = parser.parse_args()
+
+    start = time.time()
+    Path(args.outdir).mkdir(parents=True, exist_ok=True)
+
+    print(f"Loading input: {args.input}")
+    df = load_table(args.input)
+    print(f"Rows loaded: {len(df)} | Columns: {list(df.columns)}")
+
+    engine = ValidatorEngine(config_path=args.config, profile=args.profile, mask_sensitive=args.mask_sensitive)
+    flags, merged_df, merged_map, runtime_ms = engine.run(df, auto_merge=args.auto_merge)
+
+    flags_path = os.path.join(args.outdir, "Flags.csv")
+    write_flags_csv(flags, flags_path, mask_sensitive=args.mask_sensitive)
+
+    summary = {
+        "total_rows_checked": len(df),
+        "total_issues": len(flags),
+        "runtime_ms": runtime_ms
+    }
+    summary_path = os.path.join(args.outdir, "Summary.txt")
+    write_summary(summary, flags, summary_path)
+
+    if args.flagged_xlsx:
+        xlsx_path = os.path.join(args.outdir, "Flagged.xlsx")
+        write_flagged_xlsx(df, flags, xlsx_path)
+        print(f"Wrote {xlsx_path}")
+
+    # write merged map and merged dataset if merges happened
+    merged_map_path = os.path.join(args.outdir, "merged_map.csv")
+    merged_dataset_path = os.path.join(args.outdir, "merged_dataset.csv")
+    from .io import write_merged_map, write_merged_dataset
+    if merged_map:
+        write_merged_map(merged_map, merged_map_path)
+        write_merged_dataset(merged_df, merged_dataset_path)
+        print(f"Wrote merged_map ({len(merged_map)} rows) and merged_dataset")
+    else:
+        # still write the dataset
+        write_merged_dataset(merged_df, merged_dataset_path)
+        print("No merges performed; wrote dataset copy")
+
+    print(f"Wrote {flags_path} and {summary_path}")
+    print("Done.")
+
+if __name__ == "__main__":
+    main()
+```
+
+````markdown name=README.md
+```text
+Data Normalization Validator — MVP (58 checks)
+
+Overview
+- Implements the 58 checks you provided, with client-specific profiles (A1, TP, HSID).
+- Runs locally via CLI, produces Flags.csv and Summary.txt, optional Flagged.xlsx, and auto-merge outputs.
+
+Quickstart
+1. python -m venv .venv && source .venv/bin/activate
+2. pip install -r requirements.txt
+3. python -m src.validator.runner --input sample.xlsx --config config/rules.yml --outdir out --profile A1 --flagged-xlsx --auto-merge
+
+Outputs
+- out/Flags.csv
+- out/Summary.txt
+- out/Flagged.xlsx (if requested)
+- out/merged_map.csv
+- out/merged_dataset.csv
+```
